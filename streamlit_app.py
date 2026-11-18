@@ -57,7 +57,7 @@ with st.sidebar:
     st.title("🎬 CineBook"); st.caption("YOUR CINEMA, YOUR SEAT")
     if st.session_state.user:
         st.success(st.session_state.user["name"])
-        nav=["Home","My Bookings"]+ (["Admin"] if st.session_state.user["role"]=="admin" else [])+["Logout"]
+        nav=["Home"] + (["Movie"] if st.session_state.movie else []) + (["Seats"] if st.session_state.show else []) + ["My Bookings"] + (["Admin"] if st.session_state.user["role"]=="admin" else []) + ["Logout"]
     else: nav=["Home"]
     n=st.radio("Navigation",nav,index=nav.index(st.session_state.page) if st.session_state.page in nav else 0)
     if st.session_state.page in nav:
