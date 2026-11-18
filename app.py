@@ -1,4 +1,5 @@
 import os
+import tempfile
 import uuid
 from decimal import Decimal
 from datetime import datetime, timedelta
@@ -16,18 +17,33 @@ def setting(name, default=""):
     except Exception:
         return os.getenv(name, default)
 
+required = ["DB_HOST", "DB_PORT", "DB_USER", "DB_PASSWORD", "DB_NAME", "DB_SSL_CA"]
+missing = [key for key in required if not setting(key)]
+if missing:
+    st.error("Missing Streamlit Secrets: " + ", ".join(missing))
+    st.stop()
+
+ca_value = str(setting("DB_SSL_CA")).strip()
+if "-----BEGIN CERTIFICATE-----" not in ca_value:
+    st.error("DB_SSL_CA must contain the complete PEM certificate, not a file path.")
+    st.stop()
+
+_ca_file = tempfile.NamedTemporaryFile(mode="w", suffix=".pem", delete=False, encoding="utf-8")
+_ca_file.write(ca_value + "\\n")
+_ca_file.flush()
+_ca_file.close()
+
 DB = {
-    "host": setting("DB_HOST", "localhost"),
-    "port": int(setting("DB_PORT", "3306")),
-    "user": setting("DB_USER", "root"),
-    "password": setting("DB_PASSWORD", ""),
-    "database": setting("DB_NAME", "movie_booking"),
-    "connection_timeout": 15,
+    "host": str(setting("DB_HOST")).strip(),
+    "port": int(setting("DB_PORT")),
+    "user": str(setting("DB_USER")).strip(),
+    "password": str(setting("DB_PASSWORD")),
+    "database": str(setting("DB_NAME")).strip(),
+    "connection_timeout": 20,
+    "ssl_ca": _ca_file.name,
+    "ssl_verify_cert": True,
+    "ssl_verify_identity": True,
 }
-ssl_ca = setting("DB_SSL_CA")
-if ssl_ca:
-    DB["ssl_ca"] = ssl_ca
-    DB["ssl_verify_cert"] = True
 
 def connect():
     return mysql.connector.connect(**DB)
