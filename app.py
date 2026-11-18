@@ -29,7 +29,7 @@ if "-----BEGIN CERTIFICATE-----" not in ca_value:
     st.stop()
 
 _ca_file = tempfile.NamedTemporaryFile(mode="w", suffix=".pem", delete=False, encoding="utf-8")
-_ca_file.write(ca_value + "\\n")
+_ca_file.write(ca_value + "\n")
 _ca_file.flush()
 _ca_file.close()
 
