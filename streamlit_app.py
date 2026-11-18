@@ -1,4 +1,4 @@
-import os, uuid
+import os, uuid, tempfile
 from datetime import datetime, timedelta
 from decimal import Decimal
 import mysql.connector
@@ -15,11 +15,33 @@ def cfg(k, d=None):
     except Exception: pass
     return os.getenv(k, d)
 
-DB = dict(host=cfg("DB_HOST","localhost"), port=int(cfg("DB_PORT","3306")),
-          user=cfg("DB_USER","root"), password=cfg("DB_PASSWORD",""),
-          database=cfg("DB_NAME","movie_booking"), connection_timeout=15)
-if cfg("DB_SSL_CA"):
-    DB.update(ssl_ca=cfg("DB_SSL_CA"), ssl_verify_cert=True)
+required = ["DB_HOST", "DB_PORT", "DB_USER", "DB_PASSWORD", "DB_NAME", "DB_SSL_CA"]
+missing = [key for key in required if not cfg(key)]
+if missing:
+    st.error("Missing Streamlit Secrets: " + ", ".join(missing))
+    st.stop()
+
+ca_value = str(cfg("DB_SSL_CA")).strip()
+if "-----BEGIN CERTIFICATE-----" not in ca_value:
+    st.error("DB_SSL_CA must contain the complete PEM certificate, not a file path.")
+    st.stop()
+
+_ca_file = tempfile.NamedTemporaryFile(mode="w", suffix=".pem", delete=False, encoding="utf-8")
+_ca_file.write(ca_value + "\\n")
+_ca_file.flush()
+_ca_file.close()
+
+DB = dict(
+    host=str(cfg("DB_HOST")).strip(),
+    port=int(cfg("DB_PORT")),
+    user=str(cfg("DB_USER")).strip(),
+    password=str(cfg("DB_PASSWORD")),
+    database=str(cfg("DB_NAME")).strip(),
+    connection_timeout=20,
+    ssl_ca=_ca_file.name,
+    ssl_verify_cert=True,
+    ssl_verify_identity=True,
+)
 
 st.markdown("""
 <style>
